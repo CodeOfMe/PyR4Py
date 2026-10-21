@@ -5,8 +5,9 @@
 * In ``.pyr`` files / the REPL / ``PyRlang -e``: plus full R-ish syntax —
   ``x <- c(1, 2)``, ``1:10``, ``%>%``, ``%in%``, ``y ~ x``, ``df$col`` …
 
-PyPI distribution name: ``pyr-lang`` (``PyRlang`` normalises to ``pyrlang``,
-which — like ``pyr`` — is already taken on PyPI).
+PyPI distribution name: ``pyr4py`` (``PyRlang`` and ``pyr-lang`` compare equal to
+the taken ``pyrlang`` once PyPI strips ``-``/``_``, so uploads of those names are
+rejected; ``pyr4py`` — "PyR for Python" — is the distribution name).
 """
 
 from PyRlang.__version__ import __version__

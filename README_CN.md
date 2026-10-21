@@ -6,9 +6,10 @@ PyRlang 让你按 R 程序员真实的写法写代码——`x <- c(1, 2)`、`1:1
 `%in%`、`y ~ x`——底下跑的就是普通 Python。同时它也把 R 风格的数据类型包装成
 正常的 Python 库,可以直接在 `.py` 文件里用。
 
-- **PyPI 发行名:** `pyr-lang`
-  (按 PEP 503 规范化 `PyRlang` == `pyrlang`,而 `pyr` 和 `pyrlang` 在 PyPI 上分别被一个
-  2013 年的 REPL 和一个仍在活跃开发的 BEAM 运行时占着,所以发行名用 `pyr-lang`)
+- **PyPI 发行名:** `pyr4py`
+  (PyPI 比较项目名时会先剥掉 `-` 和 `_`,所以整个家族都被封了:`pyr` 是 2013 年的死 REPL,
+  `pyrlang` 是一个仍在活跃开发的 BEAM 运行时,连带 `pyr-lang`/`PyRlang` 上传也被拒;
+  `pyr4py`——"PyR for Python"——才是能通过的发行名)
 - **import 名:** `PyRlang`(`import PyRlang`、`from PyRlang import *`)
 - **协议:** GPL-3.0-or-later
 - **Python:** >= 3.10
@@ -16,7 +17,7 @@ PyRlang 让你按 R 程序员真实的写法写代码——`x <- c(1, 2)`、`1:1
 ## 安装
 
 ```bash
-pip install pyr-lang
+pip install pyr4py
 ```
 
 ## 三种用法
@@ -157,12 +158,12 @@ PyRlang
 
 ## 发布到 PyPI
 
-本项目在 PyPI 上的发行名是 **`pyr-lang`**(占名说明见开头)。
+本项目在 PyPI 上的发行名是 **`pyr4py`**(占名说明见开头)。
 
 ```bash
 python -m build
 twine check dist/*
-twine upload dist/pyr_lang-0.1.0*
+twine upload dist/pyr4py-0.1.0*
 ```
 
 先用 `--repository testpypi` 到 TestPyPI 彩排,或配置 API token:

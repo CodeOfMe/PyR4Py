@@ -47,7 +47,7 @@ def test_eval_flag():
 def test_version_flag():
     result = run_cli(["--version"])
     assert result.returncode == 0
-    assert "pyr-lang" in result.stdout
+    assert "pyr4py" in result.stdout
 
 
 def test_repl_stdin():

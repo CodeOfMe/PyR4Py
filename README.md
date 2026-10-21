@@ -6,10 +6,10 @@ PyRlang lets you write R the way R programmers actually type it — `x <- c(1, 2
 `%>%`, `%in%`, `y ~ x` — and runs it as ordinary Python underneath. It also ships the R-flavoured
 data types as a normal Python library, usable from plain `.py` files.
 
-- **PyPI distribution name:** `pyr-lang`
-  (PEP 503 normalisation makes `PyRlang` == `pyrlang`, and both `pyr` and `pyrlang` are held
-  on PyPI — by a 2013 REPL and an actively developed BEAM runtime respectively — so the
-  distribution ships as `pyr-lang`)
+- **PyPI distribution name:** `pyr4py`
+  (PyPI compares names with `-`/`_` stripped, so the whole family is blocked: `pyr` is a 2013
+  REPL, `pyrlang` is an actively developed BEAM runtime, and therefore `pyr-lang`/`PyRlang`
+  are rejected on upload too. `pyr4py` — "PyR for Python" — is the distribution name)
 - **Import name:** `PyRlang` (`import PyRlang`, `from PyRlang import *`)
 - **License:** GPL-3.0-or-later
 - **Python:** >= 3.10
@@ -17,7 +17,7 @@ data types as a normal Python library, usable from plain `.py` files.
 ## Install
 
 ```bash
-pip install pyr-lang
+pip install pyr4py
 ```
 
 ## Two ways to use it
@@ -162,12 +162,12 @@ PyRlang
 
 ## Publishing to PyPI
 
-The PyPI name for this project is **`pyr-lang`** (taken-name note above).
+The PyPI name for this project is **`pyr4py`** (taken-name note above).
 
 ```bash
 python -m build
 twine check dist/*
-twine upload dist/pyr_lang-0.1.0*
+twine upload dist/pyr4py-0.1.0*
 ```
 
 Use `--repository testpypi` to rehearse on TestPyPI, or configure an API token:

@@ -60,7 +60,7 @@ def main(argv=None) -> None:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"PyRlang {__version__} (PyPI: pyr-lang)",
+        version=f"PyRlang {__version__} (PyPI: pyr4py)",
     )
     args, rest = parser.parse_known_args(argv)
 

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pyr-lang"
+name = "pyr4py"
 dynamic = ["version"]
 description = "Write R-style syntax in pure Python: 1-based vectors, data frames, formulas, pipes and NA-aware statistics"
 readme = "README.md"
