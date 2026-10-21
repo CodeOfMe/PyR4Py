@@ -4,6 +4,18 @@ All notable changes to PyRlang are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-10-21
+
+### Changed
+
+- Project home moved to `CodeOfMe/PyR4Py` on GitHub; `pyproject.toml` metadata
+  now points at the renamed repository. (Release 0.1.0 on PyPI still shows the
+  previous URL, which GitHub redirects automatically.)
+
+### Fixed
+
+- Nothing functional; release re-cut so PyPI metadata carries the new URLs.
+
 ## [0.1.0] - 2026-10-21
 
 ### Added
@@ -27,4 +39,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   like the R console.
 - Test suite covering vectors, functions, data frames, the transformer and the CLI.
 
-[0.1.0]: https://github.com/CodeOfMe/PyRlang/releases/tag/v0.1.0
+[0.1.1]: https://github.com/CodeOfMe/PyR4Py/releases/tag/v0.1.1
+
+[0.1.0]: https://github.com/CodeOfMe/PyR4Py/releases/tag/v0.1.0

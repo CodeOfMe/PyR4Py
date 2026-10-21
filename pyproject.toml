@@ -54,11 +54,11 @@ dev = [
 PyRlang = "PyRlang.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/CodeOfMe/PyRlang"
-Documentation = "https://github.com/CodeOfMe/PyRlang#readme"
-Repository = "https://github.com/CodeOfMe/PyRlang.git"
-Issues = "https://github.com/CodeOfMe/PyRlang/issues"
-Changelog = "https://github.com/CodeOfMe/PyRlang/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/CodeOfMe/PyR4Py"
+Documentation = "https://github.com/CodeOfMe/PyR4Py#readme"
+Repository = "https://github.com/CodeOfMe/PyR4Py.git"
+Issues = "https://github.com/CodeOfMe/PyR4Py/issues"
+Changelog = "https://github.com/CodeOfMe/PyR4Py/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 path = "src/PyRlang/__version__.py"
