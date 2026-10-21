@@ -1,0 +1,29 @@
+# PyRlang basics — R-style syntax running on pure Python.
+# Run me with:  PyRlang examples/basics.pyr
+
+x <- c(2, 4.5, 8, 1, 3.3, NA)
+length(x)
+mean(x, na.rm = TRUE)
+summary(x)
+
+v <- 1:5
+v ^ 2        # R's power operator
+v[1]         # one-based: the FIRST element
+v[-1]        # drops the first element, R-style
+v[2:4]       # elements 2..4, inclusive
+
+a <- c(TRUE, FALSE, TRUE)
+!a
+a & TRUE
+
+cmp <- x < -1     # a space between '<' and '-' keeps it a comparison
+cmp
+
+ifelse(c(1, 5, 9) > 4, "big", "small")
+10 %in% c(4, 8, 10)
+c(1, 2, 3) %in% c(2, 6)
+
+paste("R", "on", "Python", sep = "-") |> toupper()
+1:10 %>% mean() %>% round(2)
+
+cat("sum(1:100) =", sum(1:100), "\n")

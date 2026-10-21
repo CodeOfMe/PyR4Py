@@ -1,0 +1,95 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyr-lang"
+dynamic = ["version"]
+description = "Write R-style syntax in pure Python: 1-based vectors, data frames, formulas, pipes and NA-aware statistics"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+authors = [
+    { name = "CodeOfMe", email = "wedonotuse@outlook.com" }
+]
+keywords = [
+    "r",
+    "rstats",
+    "statistics",
+    "syntax",
+    "vector",
+    "dataframe",
+    "formula",
+    "pipe",
+    "teaching",
+    "missing-values",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+PyRlang = "PyRlang.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/CodeOfMe/PyRlang"
+Documentation = "https://github.com/CodeOfMe/PyRlang#readme"
+Repository = "https://github.com/CodeOfMe/PyRlang.git"
+Issues = "https://github.com/CodeOfMe/PyRlang/issues"
+Changelog = "https://github.com/CodeOfMe/PyRlang/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/PyRlang/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/README_CN.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+    "/examples",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/PyRlang"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# The import package is intentionally named PyRlang (project branding).
+"src/PyRlang/*" = ["N999"]

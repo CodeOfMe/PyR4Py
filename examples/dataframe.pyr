@@ -1,0 +1,23 @@
+# Data frames, pipes and formulas — PyRlang.
+# Run me with:  PyRlang examples/dataframe.pyr
+
+df <- data.frame(
+  name = c("ada", "bob", "clyde", "dana"),
+  age  = c(34, 47, 29, 41),
+  wage = c(21.5, 33.0, 18.2, 29.4)
+)
+df
+df$age
+df[df$age > 30, ]
+df[df$age > 30, c("name", "wage")]
+df$senior <- df$age > 40
+df
+
+df$wage %>% mean() %>% round(2)
+table(df$senior)
+which.max(df$age)
+names(df)
+nrow(df)
+
+f <- wage ~ age
+f
