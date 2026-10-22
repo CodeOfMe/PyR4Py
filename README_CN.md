@@ -17,8 +17,13 @@ PyRlang 让你按 R 程序员真实的写法写代码——`x <- c(1, 2)`、`1:1
 ## 安装
 
 ```bash
-pip install pyr4py
+pip install pyr4py            # 零依赖核心
+pip install "pyr4py[all]"     # + NumPy 加速、matplotlib 绘图、pandas 互通
+pip install "pyr4py[accel]"   # + 只装 NumPy
 ```
+
+**速度:** 装了 NumPy 后,逐元素运算和统计自动走向量化路径(实测约 1.2–6 倍;
+`PYRLANG_NO_NUMPY=1` 可强制回到纯 Python 路径)。
 
 ## 三种用法
 
@@ -102,7 +107,71 @@ summary(df)  # R 风格的六数汇总
 | `a %>% f(b)`    | `PyRlang.pipe(a, f, b)`    | magrittr 管道;R 原生 `a \|> f(b)` 也支持                      |
 | `y ~ x + z`     | `Formula('y ~ x + z')` | 放在函数实参里也认识:`lm(y ~ x, data = d)` 风格               |
 | `df$col`        | `df.col`               |                                                               |
-| `data.frame(…)` | `DataFrame(…)`         | 另外 `read.csv`、`write.csv`、`which.max`、`which.min`、`na.rm=`、`length.out=` |
+| `data.frame(…)` | `DataFrame(…)`         | 另外 `read.csv`、`write.csv`、`which.max`、`which.min`、`na.rm=`、`length.out=`、`names.arg=` |
+
+## R 块语法
+
+花括号转成缩进,R 在哪用花括号,这里就转哪里:
+
+```r
+if (total > 10) {
+  msg <- "big"
+} else if (total == 10) {
+  msg <- "ten"
+} else {
+  msg <- "small"
+}
+
+for (i in 1:5) {
+  total <- total + i
+}
+
+repeat {
+  guard <- guard + 3
+  if (guard >= 9) {
+    break
+  }
+}
+```
+
+`next` 也支持,R 花括号**之外**的行保持逐字节原样,所以 `.pyr` 里混写的
+纯 Python 代码不会被改排。不支持:R 的 `function(x) {...}` 定义(请写
+Python `def`)和单行 `if (x) y <- 2` 形式。
+
+## R 终端(REPL)
+
+不带参数运行 `PyRlang`,就是一个仿 R 控制台的终端,像 IPython 那样架在
+Python 上:TAB 补全、历史存于 `~/.pyr_history`、`_` 保存上一个结果、
+`q()` 退出、`source("file.pyr")` 现场跑脚本:
+
+```text
+>> x <- c(2, 4.5, 8, 1, 3.3, NA)
+>> mean(x, na.rm = TRUE)
+[1] 3.76
+>> _
+[1] 3.76
+```
+
+## 绘图(可选)
+
+装了 `matplotlib`(`pip install "pyr4py[graphics]"`)后可用:
+
+```r
+plot(x, y, col = "steelblue")      # 散点(type = "l" 是折线)
+hist(x, breaks = 20)
+barplot(heights, names.arg = c("a", "b"))
+```
+
+图会存成 `plot_01.png`、`hist_01.png`… 并打印路径,脚本与 REPL 都不会阻塞。
+
+## pandas 互通(可选)
+
+```python
+from PyRlang import data_frame, to_pandas, from_pandas
+
+pdf = to_pandas(data_frame(age=c(34, 47)))  # pandas DataFrame(NA -> NaN)
+df = from_pandas(pdf)  # 回到 PyRlang(NaN -> NA)
+```
 
 ## 有意为之的语义
 
@@ -128,15 +197,21 @@ summary(df)  # R 风格的六数汇总
   `read.csv`、`write.csv`
 - 逻辑:`ifelse`、`%in%`、逐元素 `&`、`|`、`!`、向量化比较
 
-## 诚实说明(v0.1 的限制)
+## 诚实说明(v0.1.2 的限制)
 
-- 不支持 R 的块语法(`for (i in 1:10) { ... }`)——块结构保持 Python 写法,
-  里面随便写 R 表达式。
+- R 块语法有边界:`function(x) {...}` 定义不转换(请写 Python `def`);
+  单行 `if (x) y <- 2` 形式不支持。
 - `->`(右赋值)还没转。
-- `lm`、`glm`、`plot` 等建模与绘图栈还不存在;`Formula` 目前只是数据结构。
+- `lm`、`glm`、`ggplot` 等建模栈还不存在;`Formula` 目前只是数据结构,绘图只覆盖
+  `plot`、`hist`、`barplot`。
 - 没有包/命名空间系统;要用的 Python 库直接 `import`。
 - `.pyr` 文件里不要写 Python 类型注解(R 模式下 `n:m` 会被当成数列)。
 - 只支持 Python >= 3.10。
+
+## 版本号策略
+
+发布只允许**修改版本号最后一位**(`0.1.1` → `0.1.2` → …),`0.1` 前缀在本
+开发线内固定不动。
 
 ## 开发
 

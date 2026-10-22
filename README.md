@@ -17,8 +17,14 @@ data types as a normal Python library, usable from plain `.py` files.
 ## Install
 
 ```bash
-pip install pyr4py
+pip install pyr4py            # zero-dependency core
+pip install "pyr4py[all]"     # + NumPy fast path, matplotlib graphics, pandas interop
+pip install "pyr4py[accel]"   # + NumPy only
 ```
+
+**Speed:** when NumPy is installed the element-wise operations and statistics run
+vectorised automatically (about 1.2–6× on real workloads; `PYRLANG_NO_NUMPY=1`
+forces the pure-Python path). Set `PYRLANG_NO_NUMPY=1` to compare.
 
 ## Two ways to use it
 
@@ -103,7 +109,74 @@ summary(df)  # R-style six-number summaries
 | `a %>% f(b)`    | `PyRlang.pipe(a, f, b)`    | magrittr; native R pipe `a \|> f(b)` too                              |
 | `y ~ x + z`     | `Formula('y ~ x + z')` | including inside call arguments: `lm(y ~ x, data = d)` style          |
 | `df$col`        | `df.col`               |                                                                       |
-| `data.frame(…)` | `DataFrame(…)`         | also `read.csv`, `write.csv`, `which.max`, `which.min`, `na.rm=`, `length.out=` |
+| `data.frame(…)` | `DataFrame(…)`         | also `read.csv`, `write.csv`, `which.max`, `which.min`, `na.rm=`, `length.out=`, `names.arg=` |
+
+## R block syntax
+
+Braces become indentation, exactly where R uses them:
+
+```r
+if (total > 10) {
+  msg <- "big"
+} else if (total == 10) {
+  msg <- "ten"
+} else {
+  msg <- "small"
+}
+
+for (i in 1:5) {
+  total <- total + i
+}
+
+repeat {
+  guard <- guard + 3
+  if (guard >= 9) {
+    break
+  }
+}
+```
+
+`next` also works. Lines *outside* R braces are left byte-identical, so
+plain Python code in `.pyr` files is never reshaped. Not supported:
+R's `function(x) {...}` definitions (use Python `def`) and one-line
+`if (x) y <- 2` forms.
+
+## R console feel (REPL)
+
+`PyRlang` with no arguments is a terminal in the spirit of R's console,
+built like IPython over Python: TAB completes names, history persists at
+`~/.pyr_history`, `_` holds the last printed result, `q()` quits,
+`source("file.pyr")` runs a script in-session:
+
+```text
+>> x <- c(2, 4.5, 8, 1, 3.3, NA)
+>> mean(x, na.rm = TRUE)
+[1] 3.76
+>> _
+[1] 3.76
+```
+
+## Graphics (optional)
+
+With `matplotlib` installed (`pip install "pyr4py[graphics]"`):
+
+```r
+plot(x, y, col = "steelblue")      # scatter (type = "l" for a line)
+hist(x, breaks = 20)
+barplot(heights, names.arg = c("a", "b"))
+```
+
+Figures are saved as `plot_01.png`, `hist_01.png`, … and the path is printed,
+so both scripts and the REPL stay non-blocking.
+
+## pandas interop (optional)
+
+```python
+from PyRlang import data_frame, to_pandas, from_pandas
+
+pdf = to_pandas(data_frame(age=c(34, 47)))  # pandas DataFrame (NA -> NaN)
+df = from_pandas(pdf)  # back to PyRlang (NaN -> NA)
+```
 
 ## Semantics, by design
 
@@ -131,16 +204,21 @@ summary(df)  # R-style six-number summaries
   `names`, `read.csv`, `write.csv`
 - Logic: `ifelse`, `%in%`, element-wise `&`, `|`, `!`, vectorised comparisons
 
-## Honest limitations (v0.1)
+## Honest limitations (v0.1.2)
 
-- No R block syntax (`for (i in 1:10) { ... }`) — keep Python blocks, use R expressions
-  inside them.
+- R block syntax has limits: `function(x) {...}` definitions are not translated
+  (use Python `def`); one-line `if (x) y <- 2` forms are not supported.
 - `->` (right assignment) is not yet transformed.
-- `lm`, `glm`, `plot` and the modelling/graphics stack do not exist yet;
-  `Formula` is data only.
+- `lm`, `glm`, `ggplot` and the modelling stack do not exist yet; `Formula` is
+  data only and plotting covers `plot`, `hist`, `barplot`.
 - No packages/namespaces; Python modules are imported normally.
 - Type annotations in `.pyr` files are not supported (R mode treats `n:m` as a range).
 - Only Python >= 3.10 is supported.
+
+## Versioning policy
+
+Releases bump **only the last digit** of the version (`0.1.1` → `0.1.2` → …);
+the `0.1` prefix is fixed for this development line.
 
 ## Development
 

@@ -49,6 +49,7 @@ _DOTTED = {
     ("which", "min"): "which_min",
     ("na", "rm"): "na_rm",
     ("length", "out"): "length_out",
+    ("names", "arg"): "names_arg",
 }
 
 _DOTTED_FIRST = {first for first, _ in _DOTTED}
@@ -485,6 +486,13 @@ def _find_edit(scan: _Scan):
                 edit = _dotted_edit(scan, i)
                 if edit:
                     return edit
+            if ty == _tk.NAME and s == "next":
+                # R's `next` inside loops -> continue; keep df$next / next(x)
+                prev = toks[i - 1] if i else None
+                nxt = scan.sig_after(i)
+                if not (prev is not None and prev.type == _tk.OP and prev.string == "."):
+                    if nxt >= n or not (toks[nxt].type == _tk.OP and toks[nxt].string == "("):
+                        return (scan.off(t.start), scan.off(t.end), "continue")
             continue
         nxt = toks[i + 1] if i + 1 < n else None
         nxt2 = toks[i + 2] if i + 2 < n else None
@@ -540,13 +548,214 @@ def _find_edit(scan: _Scan):
     return None
 
 
+def _split_comment(line: str):
+    """Split one line into (code, comment); quote-aware."""
+    out = []
+    i = 0
+    n = len(line)
+    quote = None
+    while i < n:
+        ch = line[i]
+        if quote:
+            if ch == "\\" and i + 1 < n:
+                out.append(line[i : i + 2])
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            out.append(ch)
+            i += 1
+            continue
+        if ch in "\"'":
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "#":
+            return "".join(out), line[i:]
+        out.append(ch)
+        i += 1
+    return "".join(out), ""
+
+
+def _balanced_paren(text: str):
+    """If text is exactly one '(…)' pair, return the inside; otherwise None."""
+    stripped = text.strip()
+    if not stripped.startswith("("):
+        return None
+    depth = 0
+    quote = None
+    i = 0
+    n = len(stripped)
+    while i < n:
+        ch = stripped[i]
+        if quote:
+            if ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                inside = stripped[1:i]
+                tail = stripped[i + 1 :].strip()
+                return inside if not tail else None
+        i += 1
+    return None
+
+
+def _split_for_tokens(inside: str):
+    """Split ``i in 1:10`` into ('i', '1:10') at the first top-level ' in '."""
+    depth = 0
+    quote = None
+    i = 0
+    n = len(inside)
+    while i < n:
+        ch = inside[i]
+        if quote:
+            if ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        elif ch == " " and depth == 0 and inside[i : i + 4] == " in ":
+            var = inside[:i].strip()
+            seq = inside[i + 4 :].strip()
+            if var and seq:
+                return var, seq
+            return None
+        i += 1
+    return None
+
+
+def _convert_blocks(src: str) -> str:
+    """Translate R brace blocks into Python indentation.
+
+    ``if (c) {`` / ``} else {`` / ``} else if (c) {`` / ``for (i in s) {`` /
+    ``while (c) {`` / ``repeat {`` become python headers; the matching lone
+    ``}`` line is removed and body lines are re-indented one level per open
+    ``{``.  Lines at brace depth 0 are left byte-identical, so python-style
+    code that also lives in ``.pyr`` files is never reshaped.
+    """
+    out = []
+    depth = 0
+    rblocks: list[bool] = []  # per open brace: True = an R block we converted
+    quote = None
+    for line in src.split("\n"):
+        if quote is not None:
+            out.append(line)
+            code, _ = _split_comment(line)
+            for ch in code:
+                if quote:
+                    if ch == "\\":
+                        continue
+                    if ch == quote:
+                        quote = None
+                elif ch in "\"'":
+                    quote = ch
+            continue
+        code, comment = _split_comment(line)
+        core = code.rstrip()
+        stripped = core.lstrip()
+        suffix = (" " + comment.rstrip()) if comment else ""
+        if not stripped:
+            out.append(line)
+            continue
+        indent = "    " * depth
+
+        if stripped == "}" and rblocks and rblocks[-1]:
+            depth -= 1
+            rblocks.pop()
+            if depth < 0:
+                raise TransformError("unbalanced '}': no R block is open")
+            continue
+        if stripped.startswith("}") and not stripped.endswith("{"):
+            depth -= 1
+            if rblocks:
+                rblocks.pop()
+            out.append(("    " * max(depth, 0)) + stripped + suffix)
+            continue
+        if stripped.endswith("{"):
+            head = stripped[:-1].rstrip()
+            closes_first = head.startswith("}")
+            if closes_first:
+                depth -= 1
+                if rblocks and rblocks[-1]:
+                    rblocks.pop()
+                else:
+                    # a python literal's braces: leave the line untouched
+                    out.append(indent + stripped + suffix)
+                    depth += 1
+                    continue
+                head = head[1:].strip()
+                indent = "    " * depth
+            kw = (
+                head.split("(", 1)[0].strip()
+                if "(" in head
+                else (head.split()[0] if head.split() else "")
+            )
+            if kw in ("if", "while", "for"):
+                inside = _balanced_paren(head[len(kw) :])
+                if inside is None or not inside.strip():
+                    raise TransformError(
+                        f"cannot parse R block header {head!r}: the condition must "
+                        "close on the same line as '{'"
+                    )
+                if kw == "for":
+                    parts = _split_for_tokens(inside)
+                    if not parts:
+                        raise TransformError(f"cannot parse for-loop header {head!r}")
+                    new_code = f"for {parts[0]} in {parts[1]}:"
+                else:
+                    new_code = f"{kw} {inside.strip()}:"
+            elif head == "repeat":
+                new_code = "while True:"
+            elif head.startswith("else"):
+                tail = head[4:].strip()
+                if tail.startswith("if "):
+                    inside = _balanced_paren(tail[2:])
+                    if inside is None or not inside.strip():
+                        raise TransformError(f"cannot parse 'else if' header {head!r}")
+                    new_code = f"elif {inside.strip()}:"
+                elif not tail:
+                    new_code = "else:"
+                else:
+                    raise TransformError(f"cannot parse R block header {head!r}")
+            elif "function" in head.split("(")[0]:
+                raise TransformError("R 'function(...) {...}' is not supported; use a Python def()")
+            else:
+                out.append(indent + stripped + suffix)
+                depth += 1
+                rblocks.append(False)
+                continue
+            out.append(indent + new_code + suffix)
+            depth += 1
+            rblocks.append(True)
+            continue
+        out.append(line if depth == 0 else indent + stripped + suffix)
+    if rblocks:
+        raise TransformError("unbalanced R blocks: '{' without a closing '}'")
+    return "\n".join(out)
+
+
 def _autoprint(src: str) -> str:
     """Echo top-level expression results the way the R console does."""
     try:
         tree = ast.parse(src)
     except SyntaxError as exc:
         raise TransformError(f"syntax error in transformed source: {exc.msg}") from None
-    silent = {"cat", "print", "exit", "quit"}
+    silent = {"cat", "print", "exit", "quit", "plot", "hist", "barplot"}
     echo = ast.Attribute(value=ast.Name(id="PyRlang", ctx=ast.Load()), attr="_echo", ctx=ast.Load())
     changed = False
     for stmt in tree.body:
@@ -573,6 +782,7 @@ def _autoprint(src: str) -> str:
 def transform(source: str, autoprint: bool = False) -> str:
     """Rewrite R-flavoured source into pure Python (see module docstring)."""
     src = _prepass_dollar(source)
+    src = _convert_blocks(src)
     for _ in range(2000):
         scan = _Scan(src)
         edit = _find_edit(scan)

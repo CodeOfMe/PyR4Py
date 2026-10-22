@@ -1,0 +1,41 @@
+# R block syntax — if / else if / else, for, while, repeat, next
+# Run me with:  PyRlang examples/blocks.pyr
+
+total <- 0
+for (i in 1:5) {
+  total <- total + i
+}
+total
+
+msg <- "unset"
+if (total > 10) {
+  msg <- "big"
+} else if (total == 10) {
+  msg <- "ten"
+} else {
+  msg <- "small"
+}
+msg
+
+guard <- 0
+repeat {
+  guard <- guard + 3
+  if (guard >= 9) {
+    break
+  }
+}
+guard
+
+odds <- 0
+for (i in 1:9) {
+  if (i %% 2 == 0) {
+    next
+  }
+  odds <- odds + 1
+}
+odds
+
+while (total > 0) {
+  total <- total - 4
+}
+total

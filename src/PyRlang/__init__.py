@@ -41,11 +41,13 @@ from PyRlang.funcs import (
     paste0,
     pipe,
     prod,
+    q,
     rep,
     rev,
     sd,
     seq,
     sort,
+    source,
     sprintf,
     sqrt,
     substr,
@@ -65,6 +67,8 @@ from PyRlang.funcs import (
 from PyRlang.funcs import (
     _echo as _echo,  # noqa: F401  # re-exported for PyRlang._echo (used by the transformer)
 )
+from PyRlang.graphics import barplot, hist, plot
+from PyRlang.interop import from_pandas, to_pandas
 from PyRlang.io import read_csv, write_csv
 from PyRlang.vector import NA, NAType, PyRError, Vector
 
@@ -75,6 +79,7 @@ FALSE = False
 NULL = None
 NaN = float("nan")
 Inf = float("inf")
+quit = q  # R's other quit spelling
 
 __all__ = [
     "DataFrame",
@@ -94,11 +99,14 @@ __all__ = [
     "FALSE",
     "Vector",
     "__version__",
+    "barplot",
     "c",
     "cat",
     "data_frame",
     "exp",
+    "from_pandas",
     "head",
+    "hist",
     "ifelse",
     "isin",
     "length",
@@ -117,13 +125,17 @@ __all__ = [
     "paste",
     "paste0",
     "pipe",
+    "plot",
     "prod",
+    "q",
+    "quit",
     "read_csv",
     "rep",
     "rev",
     "sd",
     "seq",
     "sort",
+    "source",
     "sprintf",
     "sqrt",
     "substring",
@@ -132,6 +144,7 @@ __all__ = [
     "summary",
     "table",
     "tail",
+    "to_pandas",
     "tolower",
     "toupper",
     "unique",

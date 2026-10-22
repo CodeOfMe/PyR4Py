@@ -29,6 +29,16 @@ def test_basics_example():
     assert "R-ON-PYTHON" in result.stdout
 
 
+def test_blocks_example():
+    result = run_cli(["examples/blocks.pyr"])
+    assert result.returncode == 0, result.stderr
+    assert "[1] 15" in result.stdout  # for-loop sum
+    assert '[1] "big"' in result.stdout  # if/else-if/else
+    assert "[1] 9" in result.stdout  # repeat + break
+    assert "[1] 5" in result.stdout  # next skips evens
+    assert "[1] -1" in result.stdout  # while
+
+
 def test_dataframe_example():
     result = run_cli(["examples/dataframe.pyr"])
     assert result.returncode == 0, result.stderr

@@ -123,7 +123,7 @@ class PyrConsole:
                 self._syntax(exc)
                 return
         try:
-            with _r_displayhook():
+            with _r_displayhook(self.ns):
                 exec(code, self.ns)
         except SystemExit:
             raise
@@ -142,13 +142,14 @@ class PyrConsole:
 
 
 @contextlib.contextmanager
-def _r_displayhook():
-    """Route 'single'-mode echo through R-style printing."""
+def _r_displayhook(ns: dict):
+    """Route 'single'-mode echo through R-style printing and keep `_` set."""
     old = sys.displayhook
 
     def hook(value):
         if value is not None:
             _echo(value)
+            ns["_"] = value
 
     sys.displayhook = hook
     try:
@@ -157,12 +158,56 @@ def _r_displayhook():
         sys.displayhook = old
 
 
+def _setup_readline(console: PyrConsole) -> None:
+    """Best-effort TAB completion and persistent history (IPython-ish comfort)."""
+    if not sys.stdin.isatty() or not hasattr(sys.stdin, "isatty"):
+        return
+    try:
+        import atexit
+        import readline
+        from pathlib import Path
+    except ImportError:
+        return
+    history_path = Path.home() / ".pyr_history"
+    try:
+        readline.read_history_file(str(history_path))
+    except OSError:
+        pass
+
+    names: set[str] = set()
+    try:
+        import PyRlang as pyrmod  # noqa: N813 - local alias keeps the closure short
+
+        module_names = {n for n in dir(pyrmod) if not n.startswith("_")}
+    except Exception:  # noqa: BLE001 - completion must never crash the console
+        module_names = set()
+
+    def completer(text: str, state: int):
+        if state == 0:
+            names.clear()
+            names.update(k for k in console.ns if not k.startswith("__"))
+            names.update(module_names)
+        matches = sorted(k for k in names if k.startswith(text))
+        return matches[state] if state < len(matches) else None
+
+    try:
+        readline.set_completer(completer)
+        readline.set_completer_delims(" \t\n()[]{}=+-*/%<>,;")
+        readline.parse_and_bind("tab: complete")
+        readline.set_history_length(2000)
+        atexit.register(lambda: readline.write_history_file(str(history_path)))
+    except (OSError, ValueError):
+        pass
+
+
 def repl() -> None:
     console = PyrConsole()
+    _setup_readline(console)
     print(
         f"PyRlang {__version__} on Python {platform.python_version()} — R-style syntax, pure Python"
     )
-    print("Try: x <- c(1, 2, 3); mean(x).  exit() or Ctrl-D to quit.")
+    print("Try: x <- c(1, 2, 3); mean(x).  TAB completes, _ is the last result,")
+    print("q() or Ctrl-D quits, source('file.pyr') runs a script.")
     while True:
         prompt = "+ " if console.buf else ">> "
         try:

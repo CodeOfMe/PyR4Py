@@ -20,6 +20,10 @@ keywords = [
     "dataframe",
     "formula",
     "pipe",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "repl",
     "teaching",
     "missing-values",
 ]
@@ -42,12 +46,19 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+accel = ["numpy>=1.22"]
+graphics = ["matplotlib>=3.5"]
+pandas = ["pandas>=1.4"]
+all = ["numpy>=1.22", "matplotlib>=3.5", "pandas>=1.4"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "build>=1.0.0",
     "twine>=4.0.0",
     "ruff>=0.1.0",
+    "numpy>=1.22",
+    "matplotlib>=3.5",
+    "pandas>=1.4",
 ]
 
 [project.scripts]

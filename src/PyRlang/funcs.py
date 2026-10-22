@@ -11,15 +11,32 @@ from __future__ import annotations
 import math
 import sys
 
+import PyRlang.vector as _vec
 from PyRlang.dataframe import DataFrame
 from PyRlang.formula import Formula
-from PyRlang.vector import NA, PyRError, Vector, _r_lnot, fmt_value, format_number, is_scalar
+from PyRlang.vector import (
+    NA,
+    PyRError,
+    Vector,
+    _np_bridge,
+    _np_view,
+    _r_lnot,
+    fmt_value,
+    format_number,
+    is_scalar,
+)
 
 # R-flavoured min/max/sum below shadow the Python builtins inside this module,
 # so keep the builtins under aliases for internal plumbing.
 _py_max = max
 _py_min = min
 _py_sum = sum
+
+
+def _has_numpy():
+    """Read the live backend flag (tests may switch it off at runtime)."""
+    return _vec._np is not None
+
 
 __all__ = [
     "Summary",
@@ -49,6 +66,8 @@ __all__ = [
     "paste0",
     "pipe",
     "prod",
+    "q",
+    "source",
     "rep",
     "rev",
     "sd",
@@ -144,6 +163,8 @@ def _numeric(x, who, na_rm: bool):
 
 
 def _quantile7(sorted_vals, p):
+    if _has_numpy():
+        return float(_vec._np.quantile(_vec._np.array(sorted_vals), p))
     n = len(sorted_vals)
     h = (n - 1) * p
     lo = math.floor(h)
@@ -258,6 +279,18 @@ def length(x) -> int:
 
 def unique(x) -> Vector:
     """Unique values, first occurrence kept (like R)."""
+    if _has_numpy():
+        view = _np_view(_values(x))
+        if view is not None:
+            arr, mask = view
+            uniq, first = _vec._np.unique(arr, return_index=True)
+            del uniq
+            order = _vec._np.sort(first)
+            lst = arr[order].tolist()
+            if mask is not None and mask.any():
+                m2 = mask[order].tolist()
+                lst = [NA if m else v for m, v in zip(m2, lst, strict=True)]
+            return Vector(lst)
     out = []
     seen = set()
     for v in _values(x):
@@ -277,10 +310,21 @@ def sort(x, decreasing: bool = False, na_last=None) -> Vector:
     vals = _values(x)
     nas = [v for v in vals if v is NA]
     rest = [v for v in vals if v is not NA]
-    try:
-        rest = sorted(rest, reverse=decreasing)
-    except TypeError as exc:
-        raise PyRError(str(exc)) from None
+    if _has_numpy():
+        view = _np_view(rest)
+        if view is not None:
+            srt = _vec._np.sort(view[0], kind="stable")
+            rest = list(srt[::-1] if decreasing else srt)
+        else:
+            try:
+                rest = sorted(rest, reverse=decreasing)
+            except TypeError as exc:
+                raise PyRError(str(exc)) from None
+    else:
+        try:
+            rest = sorted(rest, reverse=decreasing)
+        except TypeError as exc:
+            raise PyRError(str(exc)) from None
     if na_last is None:
         return Vector(rest)
     if na_last:
@@ -438,6 +482,18 @@ def _echo(value) -> None:
 
 def mean(x, na_rm: bool = False):
     """Arithmetic mean; NA unless ``na_rm = True`` (R semantics)."""
+    if _has_numpy():
+        view = _np_view(_values(x))
+        if view is not None:
+            arr, mask = view
+            if arr.size == 0:
+                return float("nan")
+            if mask is None:
+                return float(arr.mean())
+            if not na_rm:
+                return NA
+            clean = arr[~_vec._np.isnan(arr)]
+            return float(clean.mean()) if clean.size else float("nan")
     vals = _numeric(x, "mean", na_rm)
     if not vals:
         return float("nan")
@@ -451,6 +507,20 @@ def mean(x, na_rm: bool = False):
 
 def var(x, na_rm: bool = False):
     """Sample variance (n - 1 denominator), NA-aware like R."""
+    if _has_numpy():
+        view = _np_view(_values(x))
+        if view is not None:
+            arr, mask = view
+            if arr.size == 0:
+                return NA
+            clean = arr
+            if mask is not None:
+                if not na_rm:
+                    return NA
+                clean = arr[~_vec._np.isnan(arr)]
+            if clean.size < 2:
+                return NA
+            return float(clean.var(ddof=1))
     vals = _numeric(x, "var", na_rm)
     if not vals:
         return NA
@@ -477,6 +547,20 @@ def sd(x, na_rm: bool = False):
 
 def median(x, na_rm: bool = False):
     """Median; NA unless ``na_rm = True``."""
+    if _has_numpy():
+        view = _np_view(_values(x))
+        if view is not None:
+            arr, mask = view
+            if arr.size == 0:
+                return NA
+            clean = arr
+            if mask is not None:
+                if not na_rm:
+                    return NA
+                clean = arr[~_vec._np.isnan(arr)]
+            if clean.size == 0:
+                return NA
+            return float(_vec._np.median(clean))
     vals = _numeric(x, "median", na_rm)
     if not vals:
         return NA
@@ -502,6 +586,10 @@ def min(*args, na_rm: bool = False):
         return NA
     if not keep:
         return float("inf")
+    if _has_numpy():
+        view = _np_view(keep)
+        if view is not None:
+            return view[0].min().item()
     best = None
     for v in keep:
         vv = int(v) if isinstance(v, bool) else v
@@ -521,6 +609,10 @@ def max(*args, na_rm: bool = False):
         return NA
     if not keep:
         return float("-inf")
+    if _has_numpy():
+        view = _np_view(keep)
+        if view is not None:
+            return view[0].max().item()
     best = None
     for v in keep:
         vv = int(v) if isinstance(v, bool) else v
@@ -538,6 +630,10 @@ def sum(*args, na_rm: bool = False):
         vals = [v for v in vals if v is not NA]
     elif any(v is NA for v in vals):
         return NA
+    if _has_numpy():
+        view = _np_view(vals)
+        if view is not None:
+            return view[0].sum().item()
     acc = 0
     for v in vals:
         acc += int(v) if isinstance(v, bool) else v
@@ -554,13 +650,17 @@ def prod(*args, na_rm: bool = False):
         vals = [v for v in vals if v is not NA]
     elif any(v is NA for v in vals):
         return NA
+    if _has_numpy():
+        view = _np_view(vals)
+        if view is not None:
+            return view[0].prod().item()
     acc = 1
     for v in vals:
         acc *= int(v) if isinstance(v, bool) else v
     return acc
 
 
-def _math1(x, fn, name, overflow="nan"):
+def _math1(x, fn, name, overflow="nan", np_fn=None):
     def one(v):
         if v is NA:
             return NA
@@ -574,6 +674,20 @@ def _math1(x, fn, name, overflow="nan"):
             return float("nan")
 
     if isinstance(x, Vector):
+        if _has_numpy():
+            view = _np_view(x.data)
+            if view is not None:
+                if np_fn is None:
+                    np_fn = {
+                        "sqrt": _vec._np.sqrt,
+                        "exp": _vec._np.exp,
+                        "log": _vec._np.log,
+                        "log10": _vec._np.log10,
+                        "log2": _vec._np.log2,
+                    }.get(name)
+                if np_fn is not None:
+                    with _vec._np.errstate(all="ignore"):
+                        return _np_bridge(np_fn(view[0]), view[1])
         return Vector([one(v) for v in x.data])
     vals = _values(x)
     if len(vals) == 1 and is_scalar(x):
@@ -594,7 +708,13 @@ def exp(x):
 def log(x, base=None):
     """Natural log by default; R's ``log(x, base)`` otherwise."""
     if base is None:
-        return _math1(x, math.log, "log")
+        return _math1(x, math.log, "log", np_fn=_vec._np.log if _has_numpy() else None)
+    if _has_numpy():
+
+        def np_fn(arr):
+            return _vec._np.log(arr) / _vec._np.log(base)
+
+        return _math1(x, lambda v: math.log(v) / math.log(base), "log", np_fn=np_fn)
     return _math1(x, lambda v: math.log(v) / math.log(base), "log")
 
 
@@ -877,3 +997,28 @@ def table(x) -> Table:
     for k in sorted(counts, key=lambda k: (isinstance(k, str), k)):
         out[k] = counts[k]
     return out
+
+
+def q(save: str = "default", status: int = 0, run_last: bool = False):
+    """Quit the script or the PyRlang REPL, R-style (``q()`` / ``q(status=1)``)."""
+    del save, run_last
+    raise SystemExit(int(status) if isinstance(status, int) else 0)
+
+
+def source(path):
+    """Run a .pyr file in the caller's global namespace (like R's source())."""
+    import inspect
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError as exc:
+        raise PyRError(f"source(): cannot open {path}: {exc.strerror or exc}") from None
+    from PyRlang.transform import PRELUDE, transform
+
+    code = PRELUDE + transform(text, autoprint=True)
+    try:
+        compiled = compile(code, str(path), "exec")
+    except SyntaxError as exc:
+        raise PyRError(f"source(): {exc.msg} (line {exc.lineno})") from None
+    exec(compiled, inspect.currentframe().f_back.f_globals)
